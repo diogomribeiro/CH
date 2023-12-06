@@ -1,0 +1,12 @@
+
+# Essential / non-essential gene lists
+mgi_essential --> 2454 MGI Mouse essential genes, obtained from McArthur lists: https://zenodo.org/record/6724346#.YzW4TtJBwlU DOI: 10.5281/zenodo.6724346. Essential in mice | 2,454 | Genes where homozygous knockout in mice results in pre-, peri- or post-natal lethality. The mouse phenotypes were reported by Jackson Labs [[Blake 2011]], then essential gene list was extracted via manual review of phenotypes by [[Georgi 2013]], and the essential/non-essential flag was put into dbNSFP [[Liu 2013]]. We extracted the genes from dbNSFP. | [[Blake 2011], [Georgi 2013], and [Liu 2013]] |
+gnomad_homozygous_tolerant --> 1815 genes from gnomad paper Karczewski et al. 2020 DOI: 10.1038/s41586-020-2308-7   Supplementary Data 7
+gnomad_essential --> 1920 genes from gnomad most conserved decile by LOEUF from Karczewski et al. 2020 DOI: 10.1038/s41586-020-2308-7 
+gnomad_nonessential --> 1919 genes from gnomad least conserved decile by LOEUF from Karczewski et al. 2020 DOI: 10.1038/s41586-020-2308-7
+hart2014_essential --> 360 genes from Hart et al. 2014 Essential in culture (shRNA screening). Measuring error rates in genomic perturbation screens: gold standards for human functional genomics Traver Hart (..) Jason Moffat DOI: 10.15252/msb.20145216
+hart2017_essential --> 684 genes from Hart et al. 2017 Essential in culture (CRISPR screening). DOI: 10.1534/g3.117.041277
+hart2014_nonessential --> 927 genes from Hart et al. 2014 Non-Essential in culture (shRNA screening). Measuring error rates in genomic perturbation screens: gold standards for human functional genomics Traver Hart (..) Jason Moffat DOI: 10.15252/msb.20145216
+ADaM_essential --> 1075 genes from in Vinceti et al. (2021) ADaM analysis of a large collection of genedependency profiles of CRISPR-Cas9 screens of 855 human cancer cell lines from different tissue lineages/cancer types, integrating Project Score and Project Achilles 20Q2
+
+# Groupfiles --> lists of CH genes to test for enrichment

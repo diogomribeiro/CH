@@ -1,0 +1,8 @@
+/home/dribeiro/git/compound_het/gene_lists/gnomad_homozygous_tolerant
+/home/dribeiro/git/compound_het/gene_lists/mgi_essential
+/home/dribeiro/git/compound_het/gene_lists/hart2014_nonessential
+/home/dribeiro/git/compound_het/gene_lists/hart2014_essential
+/home/dribeiro/git/compound_het/gene_lists/hart2017_essential
+/home/dribeiro/git/compound_het/gene_lists/gnomad_essential
+/home/dribeiro/git/compound_het/gene_lists/gnomad_nonessential
+/home/dribeiro/git/compound_het/gene_lists/ADaM_essential

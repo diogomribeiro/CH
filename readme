@@ -1,0 +1,102 @@
+# 25-Jan-2023 Overview of commands ran for CH analysis
+
+########################
+# CH identification
+########################
+
+DetermineCH.py --> Script to determine compound heterozygous in phased UKB exome data.
+Usage: 
+	python3 DetermineCH.py [sparse_vcf_file] [variant_gene_mapping_file] [output_file]
+
+Output (3 files):
+     - Report per gene --> summary of number of observed and expected CH events per gene (no individual data), columns: gene geneName numCH num2mut totalVars expectedCH, (num2mut refers to number individuals with 2 or more mutations)
+     - CH event detail ("detail" file) --> report of all CH events identified, including variant IDs and individual IDs, columns:  gene geneName individual vars01 vars10, (vars01 referes to the variant(s) in haplotype 1, and vars10 to variants(s) in haplotype 2)
+     - Variant details ("vars" file) --> one entry per variant, including list of individuals carrying the variant and phasing probabilities, columns: gene var af inds10 inds01 probs10 probs01, (10 indicates haplotype1, 01 indicates haplotype 2)
+
+########################
+# Convert VCF into sparse VCF format:
+########################
+Usage:
+	python3 vcf_to_sparse_prob.py [vcf_file] [output_file] 
+Note: vcf_to_sparse_prob_rand.py was used to produce a sparse VCF file with random phasing
+
+########################
+# Enrichment analysis
+########################
+GroupOddsRatio.py --> perform enrichment analysis between gene lists. The output of this script is used for enrichment_plot_*.R scripts
+Usage: 
+	python3 GroupOddsRatio.py groupfile_3_cats.txt external_lists.txt lof_possible_genes.txt lof_3_cats.out
+
+########################
+# Plotting
+########################
+
+results_summary_plot.R --> Fig. 3a and Supplementary Fig. 11 (CH results for LoF variants)
+lof_miss_syn_plot.R --> Fig. 3d and Supplementary Fig. 13 (expected/observed and CH events for LoF/Synonymous/Missense)
+results_summary_beagle_plot.R --> Supplementary Fig. 12 (CH events for Beagle5.4)
+enrichment_plot_direct_multi.R --> Fig. 3b,c (enrichments for LoF variants)
+enrichment_plot_beagle.R --> Supplementary Fig. 12 (enrichments for Beagle5.4)
+enrichment_plot_syn_mis.R --> Supplementary Fig. 13 (enrichments for LoF/Synonymous/Missense)
+
+########################
+# CH identification pipeline
+########################
+################
+# Step1: MAF and sample filtering
+################
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/input/UKB_chr$i.exome_array.full.shapeit5.WO_parents.rares_0.001.bcf" -iin=":Cohort/ukb_white_british_irish_caucasian.txt" -icmd="bcftools view --threads 16 --min-ac 2 --max-af 0.001:minor UKB_chr$i.exome_array.full.shapeit5.WO_parents.rares_0.001.bcf | bcftools view --force-samples --samples-file ukb_white_british_irish_caucasian.txt --min-ac 1 --threads 16 -Ob -o UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf; bcftools index UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf --threads 16;" -imount_inputs=true --tag "CH_bcftools_maf.chr$i" --destination ":CH/step1" --instance-type mem1_ssd1_v2_x16 --priority low --brief -y; done
+###############
+# Step2: Produce full VCF with wanted variants (bcftools isec)
+###############
+# LoF
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/genebass_hail_variants/chr$i.lof.vcf.gz" -iin=":CH/genebass_hail_variants/chr$i.lof.vcf.gz.csi" -iin=":CH/step1/UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf" -iin=":CH/step1/UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf.csi" -icmd="bcftools isec -c none -n=2 -w1 UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf chr$i.lof.vcf.gz --threads 16 -Oz -o chr$i.exome.lof.nosingle.vcf.gz" -imount_inputs=true --tag "CH_bcftools_isec.chr$i" --destination ":CH/step2" --instance-type mem1_ssd1_v2_x16 --priority low --brief -y; done
+# Synonymous
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/genebass_hail_variants/chr$i.synonymous.vcf.gz" -iin=":CH/genebass_hail_variants/chr$i.synonymous.vcf.gz.csi" -iin=":CH/step1/UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf" -iin=":CH/step1/UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf.csi" -icmd="bcftools isec -c none -n=2 -w1 UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf chr$i.synonymous.vcf.gz --threads 16 -Oz -o chr$i.exome.synonymous.nosingle.vcf.gz" -imount_inputs=true --tag "CH_bcftools_isec.chr$i" --destination ":CH/step2" --instance-type mem1_ssd1_v2_x16 --priority low --brief -y; done
+# Missense
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/genebass_hail_variants/chr$i.missense.vcf.gz" -iin=":CH/genebass_hail_variants/chr$i.missense.vcf.gz.csi" -iin=":CH/step1/UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf" -iin=":CH/step1/UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf.csi" -icmd="bcftools isec -c none -n=2 -w1 UKB_chr$i.exome.maf0.001.brirish_irish_caucasian_nosingle.bcf chr$i.missense.vcf.gz --threads 16 -Oz -o chr$i.exome.missense.nosingle.vcf.gz" -imount_inputs=true --tag "CH_bcftools_isec.chr$i" --destination ":CH/step2" --instance-type mem1_ssd1_v2_x16 --priority low --brief -y; done
+###############
+# Step3: Convert to sparse VCF format
+###############
+# LoF
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step2/chr$i.exome.lof.nosingle.vcf.gz" -iin=":CH/code/vcf_to_sparse_prob.py" -icmd="pip install numpy; python3 vcf_to_sparse_prob.py chr$i.exome.lof.nosingle.vcf.gz chr$i.exome.lof.nosingle.svcf.gz" -imount_inputs=true --tag "CH_sparse_vcf.chr$i" --destination ":CH/step3" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+# Synonymous
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step2/chr$i.exome.synonymous.nosingle.vcf.gz" -iin=":CH/code/vcf_to_sparse_prob.py" -icmd="pip install numpy; python3 vcf_to_sparse_prob.py chr$i.exome.synonymous.nosingle.vcf.gz chr$i.exome.synonymous.nosingle.svcf.gz" -imount_inputs=true --tag "CH_sparse_vcf.chr$i" --destination ":CH/step3" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+# Missense
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step2/chr$i.exome.missense.nosingle.vcf.gz" -iin=":CH/code/vcf_to_sparse_prob.py" -icmd="pip install numpy; python3 vcf_to_sparse_prob.py chr$i.exome.missense.nosingle.vcf.gz chr$i.exome.missense.nosingle.svcf.gz" -imount_inputs=true --tag "CH_sparse_vcf.chr$i" --destination ":CH/step3" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+###############
+# Step4: Determine CH
+###############
+# LoF
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step3/chr$i.exome.lof.nosingle.svcf.gz" -iin=":CH/code/DetermineCH.py" -iin=":CH/genebass_hail_variants/chr$i.lof_mapping.tsv.gz"  -icmd="python3 DetermineCH.py chr$i.exome.lof.nosingle.svcf.gz chr$i.lof_mapping.tsv.gz chr$i.lof.nosingle.results --probCutoff 0" -imount_inputs=true --tag "CH_determineCH.chr$i" --destination ":CH/step4/LoF_no_singleton" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+# LoF cutoff 0.99
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step3/chr$i.exome.lof.nosingle.svcf.gz" -iin=":CH/code/DetermineCH.py" -iin=":CH/genebass_hail_variants/chr$i.lof_mapping.tsv.gz"  -icmd="python3 DetermineCH.py chr$i.exome.lof.nosingle.svcf.gz chr$i.lof_mapping.tsv.gz chr$i.lof.nosingle.results --probCutoff 0.99" -imount_inputs=true --tag "CH_determineCH.chr$i" --destination ":CH/step4/LoF_no_singleton_cutoff0.99" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+# Synonymous
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step3/chr$i.exome.synonymous.nosingle.svcf.gz" -iin=":CH/code/DetermineCH.py" -iin=":CH/genebass_hail_variants/chr$i.synonymous_mapping.tsv.gz"  -icmd="python3 DetermineCH.py chr$i.exome.synonymous.nosingle.svcf.gz chr$i.synonymous_mapping.tsv.gz chr$i.synonymous.nosingle.results --probCutoff 0" -imount_inputs=true --tag "CH_determineCH.chr$i" --destination ":CH/step4/synonymous_no_singleton" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+# Missense
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step3/chr$i.exome.missense.nosingle.svcf.gz" -iin=":CH/code/DetermineCH.py" -iin=":CH/genebass_hail_variants/chr$i.missense_mapping.tsv.gz"  -icmd="python3 DetermineCH.py chr$i.exome.missense.nosingle.svcf.gz chr$i.missense_mapping.tsv.gz chr$i.missense.nosingle.results --probCutoff 0" -imount_inputs=true --tag "CH_determineCH.chr$i" --destination ":CH/step4/missense_no_singleton" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+###################
+# Randomising GT calls (LoF only)
+###################
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/step2/chr$i.exome.lof.nosingle.vcf.gz" -iin=":CH/code/vcf_to_sparse_prob_rand.py" -icmd="pip install numpy; python3 vcf_to_sparse_prob_rand.py chr$i.exome.lof.nosingle.vcf.gz chr$i.exome.lof.nosingle.svcf.gz" -imount_inputs=true --tag "CH_sparse_vcf.chr$i" --destination ":CH/step3/rand_gt1_nosingle" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y --ignore-reuse; done
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/genebass_hail_variants/chr$i.lof_mapping.tsv.gz" -iin=":CH/step3/rand_gt1_nosingle/chr$i.exome.lof.nosingle.svcf.gz" -iin=":CH/code/DetermineCH.py" -icmd="python3 DetermineCH.py chr$i.exome.lof.nosingle.svcf.gz chr$i.lof_mapping.tsv.gz chr$i.lof.nosingle.rand.results;" -imount_inputs=true --tag "CH_rand_step4.chr$i" --destination ":CH/step4/rand_gt1_nosingle" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+
+
+########################
+# Beagle (LoF only)
+########################
+################
+# Beagle Step1: MAF and sample filtering
+################
+for i in {1..22}; do dx run swiss-army-knife -iin=":/CH/input/beagle5.4/chr$i/UKB_chr$i.exome_array.WO_parents.beagle.common.vcf.gz.vcf.gz" -iin=":/CH/input/beagle5.4/chr$i/UKB_chr$i.exome_array.WO_parents.beagle.common.vcf.gz.vcf.gz.csi" -iin=":Cohort/ukb_white_british_irish_caucasian.txt" -icmd="bcftools view --threads 16 --min-ac 2 --max-af 0.001:minor UKB_chr$i.exome_array.WO_parents.beagle.common.vcf.gz.vcf.gz | bcftools view --force-samples --samples-file ukb_white_british_irish_caucasian.txt --min-ac 1 --threads 16 -Ob -o UKB_chr$i.exome_array.WO_parents.beagle.british_caucasian_nosingle.bcf; bcftools index UKB_chr$i.exome_array.WO_parents.beagle.british_caucasian_nosingle.bcf --threads 16;" -imount_inputs=true --tag "CH_bcftools_maf.chr$i" --destination ":CH/beagle/step1" --instance-type mem1_ssd1_v2_x16 --priority low --brief -y; done
+###############
+# Beagle Step2: Produce full VCF with wanted variants (bcftools isec)
+###############
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/genebass_hail_variants/chr$i.lof.vcf.gz" -iin=":CH/genebass_hail_variants/chr$i.lof.vcf.gz.csi" -iin=":CH/beagle/step1/UKB_chr$i.exome_array.WO_parents.beagle.british_caucasian_nosingle.bcf" -iin=":CH/beagle/step1/UKB_chr$i.exome_array.WO_parents.beagle.british_caucasian_nosingle.bcf.csi" -icmd="bcftools isec -c none -n=2 -w1 UKB_chr$i.exome_array.WO_parents.beagle.british_caucasian_nosingle.bcf chr$i.lof.vcf.gz --threads 16 -Oz -o chr$i.exome.lof.nosingle.vcf.gz" -imount_inputs=true --tag "CH_bcftools_isec.chr$i" --destination ":CH/beagle/step2" --instance-type mem1_ssd1_v2_x16 --priority low --brief -y; done
+###############
+# Beagle Step3: Convert to sparse VCF format
+###############
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/beagle/step2/chr$i.exome.lof.nosingle.vcf.gz" -iin=":CH/code/vcf_to_sparse.py" -icmd="pip install numpy; python3 vcf_to_sparse.py chr$i.exome.lof.nosingle.vcf.gz chr$i.exome.lof.nosingle.svcf.gz" -imount_inputs=true --tag "CH_sparse_vcf.chr$i" --destination ":CH/beagle/step3" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
+###############
+# Beagle Step4: Determine CH
+###############
+for i in {1..22}; do dx run swiss-army-knife -iin=":CH/beagle/step3/chr$i.exome.lof.nosingle.svcf.gz" -iin=":CH/code/DetermineCH.py" -iin=":CH/genebass_hail_variants/chr$i.lof_mapping.tsv.gz"  -icmd="python3 DetermineCH.py chr$i.exome.lof.nosingle.svcf.gz chr$i.lof_mapping.tsv.gz chr$i.lof.results --probCutoff 0" -imount_inputs=true --tag "CH_determineCH.chr$i" --destination ":CH/beagle/step4/LoF_no_singleton" --instance-type mem1_ssd1_v2_x2 --priority low --brief -y; done
